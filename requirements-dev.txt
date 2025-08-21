@@ -1,0 +1,13 @@
+# Testing
+pytest
+pytest-cov
+
+# Linting e formattazione
+flake8
+black
+isort
+mypy
+
+# Documentazione (opzionale, se vuoi generarla con Sphinx)
+sphinx
+sphinx-rtd-theme

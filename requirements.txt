@@ -1,0 +1,12 @@
+llama-index
+transformers
+accelerate
+torch
+sentence-transformers
+chromadb
+pypdf
+python-docx
+unstructured
+gradio
+tqdm
+rich
