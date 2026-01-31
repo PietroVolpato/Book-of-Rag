@@ -10,8 +10,8 @@ from qdrant_client import QdrantClient
 OLLAMA_URL = "http://localhost:11434"
 QDRANT_URL = "http://localhost:6333"
 COLLECTION_NAME = "local_notebook"
-EMBEDDING_MODEL = "nomic-embed-text"
-LLM_MODEL = "llama3.2:3b"
+EMBEDDING_MODEL = "qwen3-embedding:0.6b"
+LLM_MODEL = "phi4-mini:3.8b"
 
 def start_chat():
     client = QdrantClient(url=QDRANT_URL)
@@ -23,12 +23,12 @@ def start_chat():
         embedding=embeddings,
     )
     
-    retriever = vector_store.as_retriever(search_kwargs={"k": 4}) # Recupera i top 4 documenti rilevanti
+    retriever = vector_store.as_retriever(search_kwargs={"k": 10})
 
     llm = ChatOllama(
         model=LLM_MODEL,
         base_url=OLLAMA_URL,
-        temperature=0,
+        temperature=0
     )
 
     template = """Sei un assistente AI che risponde alle domande basandosi SOLO sul contesto fornito qui sotto.

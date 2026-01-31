@@ -11,7 +11,7 @@ from qdrant_client.http.models import Distance, VectorParams
 OLLAMA_URL = "http://localhost:11434"
 QDRANT_URL = "http://localhost:6333"
 COLLECTION_NAME = "local_notebook"
-EMBEDDING_MODEL = "nomic-embed-text"
+EMBEDDING_MODEL = "qwen3-embedding:0.6b"
 
 def ingest_document(file_path):
     print(f"Caricamento file: {file_path}...")
@@ -22,7 +22,7 @@ def ingest_document(file_path):
 
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,
-        chunk_overlap=200,
+        chunk_overlap=100,
         separators=["\n\n", "\n", ".", " ", ""]
     )
     splits = text_splitter.split_documents(docs)
@@ -49,7 +49,7 @@ def ingest_document(file_path):
         embeddings,
         url=QDRANT_URL,
         collection_name=COLLECTION_NAME,
-        force_recreate=False
+        force_recreate=True
     )
     
     print("Completato! Il documento è nella memoria a lungo termine.")

@@ -4,4 +4,3 @@ langchain-ollama
 langchain-qdrant
 qdrant-client
 pymupdf
-sys
