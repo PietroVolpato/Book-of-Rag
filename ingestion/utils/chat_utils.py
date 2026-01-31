@@ -1,17 +1,13 @@
 # src/galoispy/utils/chat_utils.py
 import json
-from pydantic import ValidationError
 import re
 import tiktoken
 from typing import Tuple
 # LangChain packages
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-from langchain_core.runnables import Runnable
-from langchain_openai.chat_models.base import OpenAIRefusalError
+from langchain_ollama import ChatOllama
 # LLama-Index packages
 from llama_index.core.memory import ChatMemoryBuffer
-# Utils
-from galoispy.exception import NotStructuredAnswerError
 
 def _strip_think_section(text: str) -> str:
     """
@@ -141,67 +137,12 @@ def _memory_refactor(memory: ChatMemoryBuffer, summarization_prompt_template: st
     memory.put(SystemMessage(content=summarization_prompt_template.format(system_prompt=system_prompt, generated_content=generated_content.strip())))
     return memory
 
-def get_structured_response(model: Runnable, user_prompt: str, system_prompt: str, tokenizer: str) -> Tuple[str, int]:
+def response_with_history(model: ChatOllama, memory: ChatMemoryBuffer, user_prompt: str, summarization_prompt_template: str, context_window_size: int, occupancy_ratio: float, tokenizer: str) -> Tuple[str, ChatMemoryBuffer, int]:
     """
-    Helper function to get structured response **without** a chat memory buffer.
+    It generates a response from the model using the chat history stored in memory.
     
     :param model: The LLM model to use.
-    :type model: Runnable
-    :param user_prompt: The user prompt to send to the model.
-    :type user_prompt: str
-    :param system_prompt: The system prompt to provide context to the model.
-    :type system_prompt: str
-    :param tokenizer: The tokenizer to use for counting tokens.
-    :type tokenizer: str
-    :return: A tuple containing the structured response and the number of tokens used.
-    :rtype: Tuple[str, int]
-    """
-    tokens_used = 0
-    messages = []
-    
-    # Add system prompt if present
-    if system_prompt:
-        messages = [
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=user_prompt)
-        ]
-    else:
-        messages = [
-            HumanMessage(content=user_prompt)
-        ]
-
-    response = None
-    for i in range(3): # Retry up to 3 times
-        try:
-            response = model.invoke(messages)
-            break
-        # Catch langchain exception - LLM output is not structured
-        except (AttributeError, ValidationError, OpenAIRefusalError):
-            # Update token usage
-            tokens_used = _get_num_tokens(messages=messages, tokenizer=tokenizer)
-            continue
-
-    if response is None:
-        raise NotStructuredAnswerError("The model did not return a valid response after multiple attempts. Please try again later.")
-    
-    # Calculate token usage with the response
-    if hasattr(response, "model_dump_json"):
-        content_str = response.model_dump_json()
-    elif hasattr(response, "content"):
-        content_str = str(response.content)
-    else:
-        content_str = str(response)
-    messages.append(AIMessage(content=content_str))
-    tokens_used = _get_num_tokens(messages=messages, tokenizer=tokenizer)
-
-    return (response, tokens_used)
-
-def get_structured_response_with_history(model: Runnable, memory: ChatMemoryBuffer, user_prompt: str, summarization_prompt_template: str, context_window_size: int, occupancy_ratio: float, tokenizer: str) -> Tuple[str, ChatMemoryBuffer, int]:
-    """
-    Helper function to get structured response **with** a chat memory buffer.
-    
-    :param model: The LLM model to use.
-    :type model: Runnable
+    :type model: ChatOllama
     :param memory: The chat memory buffer to use.
     :type memory: ChatMemoryBuffer
     :param user_prompt: The user prompt to send to the model.
@@ -254,19 +195,8 @@ def get_structured_response_with_history(model: Runnable, memory: ChatMemoryBuff
             HumanMessage(content=user_prompt)
         ]
 
-    response = None
-    for i in range(3): # Retry up to 3 times
-        try:
-            response = model.invoke(messages)
-            break
-        # Catch langchain exception - LLM output is not structured
-        except (AttributeError, ValidationError, OpenAIRefusalError):
-            # Update token usage
-            tokens_used = _get_num_tokens(messages=messages, tokenizer=tokenizer)
-            continue
-    
-    if response is None:
-        raise NotStructuredAnswerError("The model did not return a valid response after multiple attempts. Please try again later.")
+    response = model.generate(messages)
+    tokens_used = _get_num_tokens(messages=messages, tokenizer=tokenizer)
     
     # Update token usage with the response
     if hasattr(response, "model_dump_json"):

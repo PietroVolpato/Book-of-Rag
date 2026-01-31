@@ -13,33 +13,34 @@ from langchain_ollama import ChatOllama
 
 def is_ollama_active() -> bool:
     """
-    Check if the Ollama server is active.\n
-    Returns True if the service is running, False otherwise.
+    Check if the Ollama Docker container is running.
     
-    :return: True if Ollama is active, False otherwise.
+    :return: True if the Ollama container is running, False otherwise.
     :rtype: bool
     """
-    list = psutil.pids()
-    for i in range(0, len(list)):
-        try:
-            p = psutil.Process(list[i])
-            if (platform.system() == "Windows" and p.cmdline()[0].find("ollama.exe") != -1) or (platform.system() != "Windows" and "ollama" in p.cmdline()[0]):
-                return True
-        except (psutil.NoSuchProcess, psutil.AccessDenied, IndexError):
-            continue
-    return False
+    try:
+        result = subprocess.run(
+            ["docker", "inspect", "-f", "{{.State.Running}}", "ollama-engine"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8"
+        )
+        return result.stdout.strip() == "true"
+    except Exception:
+        return False
 
 def start_ollama() -> None:
     """
-    Start the Ollama server if it is not already running.
+    Start the Ollama Docker container if it is not already running.
     """
     if not is_ollama_active():
-        # Start the Ollama server
-        if platform.system() == "Windows":
-            os.system("start /B ollama serve > NUL 2>&1")
-        else:
-            os.system("ollama serve & > /dev/null 2>&1 &")
-        # Wait for a few seconds to ensure the service starts properly
+        subprocess.run(
+            ["docker", "start", "ollama-engine"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8"
+        )
+        # Wait a few seconds to ensure the service starts properly
         time.sleep(2)
 
 def stop_ollama() -> None:
@@ -170,7 +171,7 @@ def _model_selection(model_name: str, download: bool) -> str:
         if download:
             # Download the model
             result = subprocess.run(
-                ["ollama", "pull", model_name],
+                ["docker", "exec", "ollama-engine", "ollama", "pull", model_name],
                 # Capture the command output in `result.stdout` or `result.stderr`
                 capture_output=True,
                 # Decode the output as a string
@@ -188,6 +189,33 @@ def _model_selection(model_name: str, download: bool) -> str:
         else:
             raise RuntimeError(f"The model {model_name} is not downloaded.")
     return model_name
+
+def remove_model(model_name: str) -> None:
+    """
+    Remove a model from Ollama.
+    
+    :param model_name: The name of the model to remove.
+    :type model_name: str
+    """
+    downloaded_models = list_models()
+    if model_name in downloaded_models:
+        # Remove the model
+        result = subprocess.run(
+            ["docker", "exec", "ollama-engine", "ollama", "rm", model_name],
+            # Capture the command output in `result.stdout` or `result.stderr`
+            capture_output=True,
+            # Decode the output as a string
+            text=True,
+            # UTF-8 encoding
+            encoding="utf-8",
+            # Ignore the character errors
+            errors="ignore"
+        )
+        if result.returncode != 0:
+            stop_ollama()
+            raise RuntimeError(f"An error occurred while removing the model {model_name}.")
+    else:
+        raise RuntimeError(f"The model {model_name} is not downloaded.")
 
 def _ollama_model_config(model_name: str, temperature: float, think: bool, top_p: float, frequency_penalty: float, presence_penalty: float) -> ChatOllama:
     """

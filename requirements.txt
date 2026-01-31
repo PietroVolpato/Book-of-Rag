@@ -2,5 +2,8 @@ langchain
 langchain-community
 langchain-ollama
 langchain-qdrant
+llama-index
 qdrant-client
 pymupdf
+psutil
+tiktoken
