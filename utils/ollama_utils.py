@@ -1,5 +1,5 @@
 # src/galoispy/utils/ollama_utils.py
-import json
+import configparser
 import ollama
 import os
 import platform
@@ -268,53 +268,23 @@ def _ollama_model_config(model_name: str, temperature: float, think: bool, top_p
     # Return the model
     return ollama_model
 
-def ollama_model_init(config_schema:json) -> ChatOllama:
+def ollama_model_init(model_name: str) -> ChatOllama:
     """
-    Initialize the Ollama model from a configuration schema in JSON.\n
-    It extracts:
-    - The model name.
-    - If the model has to be downloaded or not.
-    - The model temperature.
-    - If the "thinking" mode has to be enabled or not.
-    - The top-p setting.
-    - The frequency penalty setting.
-    - The presence penalty setting.
-    
-    :param config_schema: The configuration schema in JSON.
-    :type config_schema: json
+    It initializes the Ollama model with the specified configuration parameters from the config.ini file.
+
     :return: The initialized ChatOllama model.
     :rtype: ChatOllama
     """
-    # Load the configuration schema
-    schema = json.loads(config_schema)
-    if "model" in schema:
-        model_name = schema["model"]
-    else:
-        raise RuntimeError("The configuration schema must contain the 'model' field.")
-    if "download" in schema:
-        download = schema["download"]
-    else:
-        download = False
-    if "temperature" in schema:
-        temperature = float(schema["temperature"])
-    else:
-        temperature = 0.0
-    if "think" in schema:
-        think = bool(schema["think"])
-    else:
-        think = False
-    if "top_p" in schema:
-        top_p = float(schema["top_p"])
-    else:
-        top_p = 1.0
-    if "frequency_penalty" in schema:
-        frequency_penalty = float(schema["frequency_penalty"])
-    else:
-        frequency_penalty = 0.0
-    if "presence_penalty" in schema:
-        presence_penalty = float(schema["presence_penalty"])
-    else:
-        presence_penalty = 0.0
+    # Load the configuration from the config.ini file
+    ollama_config = configparser.ConfigParser()
+    ollama_config.read(os.path.join(os.path.dirname(__file__), 'config.ini'))
+
+    temperature = ollama_config.getfloat('ollama.utils.config', 'temperature', fallback=0.0)
+    download = ollama_config.getboolean('ollama.utils.config', 'download', fallback=True)
+    think = ollama_config.getboolean('ollama.utils.config', 'think', fallback=False)
+    top_p = ollama_config.getfloat('ollama.utils.config', 'top_p', fallback=1.0)
+    frequency_penalty = ollama_config.getfloat('ollama.utils.config', 'frequency_penalty', fallback=0.0)
+    presence_penalty = ollama_config.getfloat('ollama.utils.config', 'presence_penalty', fallback=0.0)
 
     # Start the Ollama server if it is not already running
     start_ollama()
