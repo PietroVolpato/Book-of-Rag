@@ -1,11 +1,10 @@
-import os
-
 from langchain_community.document_loaders import PyMuPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_ollama import OllamaEmbeddings
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import Distance, VectorParams
+from pathlib import Path
 
 # CONFIGURAZIONE
 OLLAMA_URL = "http://localhost:11434"
@@ -55,9 +54,11 @@ def ingest_document(file_path):
     print("Completato! Il documento è nella memoria a lungo termine.")
 
 if __name__ == "__main__":
-    pdf_path = "SP - Lezione 01.pdf" 
+    root_path = Path(__file__).parent.parent.resolve()
+    folder_path = root_path / "material"
+    pdf_path = folder_path / "SP - Lezione 01.pdf"
     
-    if os.path.exists(pdf_path):
+    if pdf_path.exists():
         ingest_document(pdf_path)
     else:
         print(f"File {pdf_path} non trovato. Metti un PDF nella cartella e riprova.")
